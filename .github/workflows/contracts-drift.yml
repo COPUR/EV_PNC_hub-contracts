@@ -1,0 +1,58 @@
+name: contracts-drift
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pinned:
+    # _sources/ must equal a fresh build from the pinned upstream commits (catches hand edits).
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv run --with pyyaml python -m unittest discover -s tests
+      - run: uv run tools/fetch_public_contracts.py --check
+
+  upstream:
+    # Weekly: has Hubject published anything newer than the pins? The diff goes to the job
+    # summary and an artifact so a human reviews it before the pins move.
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - id: drift
+        run: |
+          if uv run tools/fetch_public_contracts.py --check-upstream; then
+            echo "drift=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "drift=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.drift.outputs.drift == 'true'
+        run: |
+          uv run tools/fetch_public_contracts.py --update-pins
+          git diff --stat -- _sources > drift.stat
+          git diff -- _sources > drift.diff
+          {
+            echo "## Upstream Hubject contracts changed"
+            echo '```'
+            cat drift.stat
+            echo '```'
+            echo "Full diff is in the drift-diff artifact. Review it, then commit the updated pins and _sources/."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - if: steps.drift.outputs.drift == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: drift-diff
+          path: drift.diff
+      - if: steps.drift.outputs.drift == 'true'
+        run: exit 1

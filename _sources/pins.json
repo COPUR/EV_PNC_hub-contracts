@@ -1,0 +1,8 @@
+{
+  "note": "Upstream commits the generated _sources/ files are built from. Move them with --update-pins and review the diff.",
+  "pins": {
+    "oicp-emp-2.3-api-doc": "9a773b3a77c05264f087e73c5af04268425f9296",
+    "oicp-cpo-2.3-api-doc": "f5a8e2f2eac29c76ad840f855181e54b11394e68",
+    "opcp": "de066c804fa9fe8cc8e5f1b02ceadfbb67324dd9"
+  }
+}

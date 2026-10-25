@@ -1,0 +1,812 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "CCP Interface Description",
+    "version": "1.0",
+    "description": "The interfaces of the Contract Certificate Pool (CCP) are used to request the provisioning of Contract Data. It accepts Contract Data signed by a CPS. Optionally the data can be forwarded to the CCP directly by the CPS. \n\nThis service provides the following interfaces:\n * Get Signed Contract Data\n * Provide Signed Contract Data\n * Delete Signed Contract Data\n * Get Contracts for PCID\n * Lookup Contract\n * Define Contract as Default for Offline installation\n * Add Signed Contract Data\n\n\n\n\n### Clients\n\nThe CCP communicates with the following actors and services:\n\n * The _Mobility Operator_ calls the CCP API actively to send Signed Contract Data.\n * The _Contract Provisioning Service_ forwards Signed Contract Data to the CCP.\n * The _CPO_ both send CertificateInstallationRequests to receive \nCertificateInstallationResponses\n * The _OEM_ request CertificateInstallationRequests via PCID and EMAID to receive \nCertificateInstallationResponses\n * OCSP Responders of the Contract Certificates\n * Root Certificate Pool\n ",
+    "contact": {
+      "name": "Hubject GmbH",
+      "url": "https://hubject.com",
+      "email": "support@pnc.hubject.com"
+    },
+    "termsOfService": "https://www.hubject.com/pki/",
+    "license": {
+      "name": "Attribution-ShareAlike 4.0 International",
+      "url": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    "x-source": "https://raw.githubusercontent.com/hubject/opcp/de066c804fa9fe8cc8e5f1b02ceadfbb67324dd9/OPCP-1.0.0/reference/ccp.v1.json",
+    "x-commit": "de066c804fa9fe8cc8e5f1b02ceadfbb67324dd9",
+    "x-licence": "CC BY-SA 4.0",
+    "x-note": "Derived subset. Hub copy is authoritative; keep attribution and share-alike.",
+    "x-role-filter": "mobility operator (eMSP) operations only"
+  },
+  "servers": [],
+  "tags": [
+    {
+      "name": "MO",
+      "description": "API relevant for Mobility Operators"
+    },
+    {
+      "name": "OEM",
+      "description": "API relevant for EV OEMs"
+    },
+    {
+      "name": "CPO",
+      "description": "API relevant for CPOs"
+    },
+    {
+      "name": "contract-certificate-pool-controller",
+      "description": "internal identifier"
+    }
+  ],
+  "paths": {
+    "/v1/ccp/signedContractData": {
+      "parameters": [],
+      "put": {
+        "summary": "Add Signed Contract Data to CCP",
+        "operationId": "addSignedContractData",
+        "responses": {
+          "201": {
+            "description": "Created"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "description": "",
+                  "type": "object",
+                  "properties": {
+                    "errorMessages": {
+                      "type": "array",
+                      "items": {
+                        "required": [],
+                        "properties": {}
+                      }
+                    },
+                    "traceId": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "errorMessages",
+                    "traceId"
+                  ],
+                  "x-examples": {
+                    "example-1": {
+                      "errorMessages": [
+                        "The validUntil date of contract certificate is in the past."
+                      ],
+                      "traceId": "42893efb-2cc3-4b02-b570-d0cc31319e3b"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "description": "This interface can be used by a CPS to send signed contract data to the Contract Certificate Pool. It is stored there to be provided to the OEM and CPO backend.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignedContractDataRequest"
+              }
+            }
+          }
+        },
+        "tags": [
+          "contract-certificate-pool-controller"
+        ],
+        "security": [
+          {
+            "CPS": []
+          }
+        ]
+      }
+    },
+    "/v1/ccp/signedContractData/{emaid}": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}[-]?\\w{3}[-]?\\w{9}[-]?(\\w{1})?$",
+            "minLength": 14,
+            "maxLength": 15
+          },
+          "name": "emaid",
+          "in": "path",
+          "required": true,
+          "description": "Contract identifier of contract certificate"
+        }
+      ],
+      "delete": {
+        "summary": "Delete Signed Contract Data",
+        "operationId": "deleteSignedContractData",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "Invalid EMAID": {
+                    "value": {
+                      "errorMessages": [
+                        "emaid : must match \"^[A-Za-z]{2}[-]?\\w{3}[-]?\\w{9}[-]?(\\w{1})?$\""
+                      ],
+                      "traceId": "a079010e-4766-4f4a-9f4c-ccd0f0ddae1e"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "EMAID not found": {
+                    "value": {
+                      "errorMessages": [
+                        "The contract for the given EMAID not found."
+                      ],
+                      "traceId": "bc81a20d-e517-4b5d-b6d7-e6d1888a9662"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "502": {
+            "description": "Bad Gateway"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        },
+        "tags": [
+          "MO",
+          "contract-certificate-pool-controller"
+        ],
+        "description": "The deletion of signed contract data from the CCP can be used to de-publish it by the MO. A revoked or expired contract certificate will be cleaned from the pool automatically. See the section [Data Cleansing in the CCP description](#contract-certificate-pool).\n\nThe PCP calls this method when a Provisioning Certificate has been deleted. See `DELETE /oem/provCerts/{pcid}` for more details.\n\n\n### Data validation steps\n\nThe Contract Certificate Pool performs the following validation steps before deleting signed contract data.\n\n| Target                   | Check                        |             \n|--------------------------|----------------------------- |\n| Authorization            | Sender must be allowed to delete contract data for the given EMAID. |\n| Request Parameter        | The EMAID must be provided.                                \n| Request Parameter        | The EMAID must match the specification                     |\n| Request Parameter        | The EMAID must reference an existing contract data package.  |\n\n\n## Automatic revocation\n\n<!-- theme: warning -->\n\n> If the Contract Certificate has been issued by a Operator-operated MO CA, the certificate will be revoked automatically. This functionality can be turned of by setting the `X-Skip-Revocation` header to `true`. This is not recommended and should just be used for test cases!\n\nThe procedure for this functionality is:\n\n1. CCP receives a DELETE for a EMAID.\n2. The CCP checks if the related Contract Certificated has been issued by a Operator MO V2G CA\n3. If so, the CCP sends a revocation request to the issuing CA.\n4. On successful revocation the Contract Data will be deleted from the pool. On error the Contract Data remains in the pool and an error message is returned.\n",
+        "parameters": [
+          {
+            "schema": {
+              "type": "boolean",
+              "enum": [
+                true,
+                false
+              ],
+              "default": false
+            },
+            "in": "header",
+            "name": "X-Skip-Revocation",
+            "description": "Do not revoke the contract certificate."
+          }
+        ],
+        "security": [
+          {
+            "MO": []
+          }
+        ]
+      }
+    },
+    "/v1/ccp/signedContractData/{pcid}/{emaid}/default": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}[-]?\\w{3}[-]?\\w{9}[-]?(\\w{1})?$",
+            "minLength": 14,
+            "maxLength": 15
+          },
+          "name": "emaid",
+          "in": "path",
+          "required": true,
+          "description": "The EMAID of the requested contract."
+        },
+        {
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9]{17,18}$",
+            "maxLength": 18,
+            "minLength": 17
+          },
+          "name": "pcid",
+          "in": "path",
+          "required": true,
+          "description": "The related Provisioning Certificate ID."
+        }
+      ],
+      "post": {
+        "summary": "Define Contract as Default for Offline installation",
+        "tags": [
+          "contract-certificate-pool-controller",
+          "MO",
+          "OEM"
+        ],
+        "operationId": "setDefaultContract",
+        "description": "The CCP offers this additional interface to set an existing signed contract data as default. The default Contract-Data will always be send in the CertificateInstallationRequest. The OEM will requests the endpoint to mark a contract (based on EMAID) as default for a PCID for an offline installation.\n\n| Prio                                            | \n|--------------------------------------------------|\n| The first created Contract will be always the default |\n| If a default contract gets deleted, no contract will automaticly set as the new default contract - an notification will be send to the OEM|",
+        "parameters": [],
+        "security": [
+          {
+            "OEM": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "502": {
+            "description": "Bad Gateway"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        }
+      }
+    },
+    "/v1/ccp/lookupContract/{emaid}": {
+      "parameters": [
+        {
+          "schema": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}[-]?\\w{3}[-]?\\w{9}[-]?(\\w{1})?$"
+          },
+          "name": "emaid",
+          "in": "path",
+          "required": true,
+          "description": "Contract identifier of contract certificate"
+        }
+      ],
+      "get": {
+        "summary": "Lookup Contract",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupContractResponse"
+                },
+                "examples": {
+                  "example-1": {
+                    "value": {
+                      "XMLContracts": [
+                        {
+                          "pcid": "huboemprovcqa0615",
+                          "emaid": "EMP99CQATEST001",
+                          "xsdMsgDefNamespace": "urn:iso:15118:2:2013:MsgDef",
+                          "contractCertificate": "MIIB7jCCAZSgAwIBAgIQQihl/GZf3VrjEbtD8OftBDAKBggqhkjOPQQDAjBYMQswCQYDVQQGEwJERTEVMBMGA1UEChMMSHViamVjdCBHbWJIMR0wGwYDVQQDExRNTyBTdWIyIENBIFFBIEcxLjEuMTETMBEGCgmSJomT8ixkARkWA1YyRzAeFw0yMjAyMDcyMzE3MzdaFw0yMjEyMTAxMTQyNTlaMDExFTATBgNVBAoTDEh1YmplY3QgR21iSDEYMBYGA1UEAxMPRU1QOTlDUUFURVNUMDAxMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEDB59w53BxLuMBDDYTzDqpJLoJqIZEJoZWlYti+n97erJYD8JHaA0630uzghrNnjVa8sZKqBv8XX6V9H6H+gYS6NnMGUwEQYDVR0OBAoECEPJRNHvPWNdMBMGA1UdIwQMMAqACEf6f9verOzVMDsGCCsGAQUFBwEBBC8wLTArBggrBgEFBQcwAYYfaHR0cDovL29jc3AtcWEuaHViamVjdC5jb206ODA4MDAKBggqhkjOPQQDAgNIADBFAiEA3S6DrF1uTpyZW/eF3XPeykX2L6ubl/2fiNujT4ENX1cCIF/D/ftiHiIKcuDLrHRVFxpcXeQfQ8NmUHhThtNZRDRC",
+                          "priority": 1,
+                          "certValidFrom": "2022-02-07T23:17:37Z",
+                          "certValidTo": "2022-12-10T11:42:59Z"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                },
+                "examples": {
+                  "Invalid EMAID": {
+                    "value": {
+                      "errorMessages": [
+                        "emaid : must match \"^[A-Za-z]{2}[-]?\\w{3}[-]?\\w{9}[-]?(\\w{1})?$\""
+                      ],
+                      "traceId": "02be5c05-298b-4503-a685-8126951e0233"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          },
+          "502": {
+            "description": "Bad Gateway"
+          },
+          "503": {
+            "description": "Service Unavailable"
+          }
+        },
+        "operationId": "lookupContract",
+        "description": "The MO sends a request to the Contract Certificate Pool (CCP) to check the availability of the contract for the requested EMAID.",
+        "tags": [
+          "MO",
+          "CPO",
+          "contract-certificate-pool-controller"
+        ],
+        "security": [
+          {
+            "OEM": []
+          },
+          {
+            "CPO": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "default": "urn:iso:15118:2:2013:MsgDef",
+              "example": "urn:iso:15118:2:2013:MsgDef"
+            },
+            "in": "query",
+            "name": "xsdMsgDefNamespace",
+            "description": "to receive contract data for a specific ISO version"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{8}\\-([0-9a-fA-F]{4}\\-){3}[0-9a-fA-F]{12}$",
+              "example": "896b6655-180e-4304-b642-606bb00df8f0"
+            },
+            "in": "query",
+            "description": "The SHA256 Fingerprint of the desired V2G root CA which shall was used to sign these data with the regarding CPS signing certificate. Its optional. If not given, the CPS will decide which CPS signing V2G PKI will be renurned",
+            "name": "cpsV2GRootCertificateFingerprint"
+          }
+        ]
+      }
+    },
+    "/v1/ccp/signedContractData/{pcid}": {
+      "get": {
+        "summary": "Get Contracts for PCID",
+        "tags": [],
+        "operationId": "getContracts",
+        "x-internal": false,
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LookupContractResponse"
+                },
+                "examples": {}
+              },
+              "application/xml": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              },
+              "multipart/form-data": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            }
+          }
+        },
+        "description": "Lists available contract data for a given PCID.",
+        "security": [
+          {
+            "OEM": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "default": "urn:iso:15118:2:2013:MsgDef",
+              "example": "urn:iso:15118:2:2013:MsgDef"
+            },
+            "in": "query",
+            "name": "xsdMsgDefNamespace",
+            "description": "to receive contract data for a specific ISO version"
+          }
+        ]
+      },
+      "parameters": [
+        {
+          "schema": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9]{17,18}$",
+            "minLength": 17,
+            "maxLength": 18
+          },
+          "name": "pcid",
+          "in": "path",
+          "required": true,
+          "description": "PCID of vehicle certificate"
+        }
+      ]
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "MO": {
+        "type": "oauth2",
+        "description": "OAuth2 is used to grant access to the endpoint. ",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "",
+            "tokenUrl": "",
+            "refreshUrl": "",
+            "scopes": {}
+          }
+        }
+      },
+      "OEM": {
+        "type": "oauth2",
+        "description": "OAuth2 is used to grant access to the endpoint. ",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "",
+            "tokenUrl": "",
+            "refreshUrl": "",
+            "scopes": {}
+          }
+        }
+      },
+      "CPO": {
+        "type": "oauth2",
+        "description": "OAuth2 is used to grant access to the endpoint. ",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "",
+            "tokenUrl": "",
+            "refreshUrl": "",
+            "scopes": {}
+          }
+        }
+      },
+      "CPS": {
+        "type": "oauth2",
+        "description": "OAuth2 is used to grant access to the endpoint. ",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "",
+            "tokenUrl": "",
+            "refreshUrl": "",
+            "scopes": {}
+          }
+        }
+      }
+    },
+    "schemas": {
+      "GetSignedContractDataRequest": {
+        "type": "object",
+        "title": "GetSignedContractDataRequest",
+        "description": "",
+        "minProperties": 2,
+        "properties": {
+          "certificateInstallationReq": {
+            "type": "string",
+            "description": "base64 encoded"
+          },
+          "xsdMsgDefNamespace": {
+            "type": "string",
+            "description": "ISO Version",
+            "example": "urn:iso:15118:2:2013:MsgDef"
+          },
+          "metadata": {
+            "type": "string",
+            "description": "open for future usage"
+          }
+        },
+        "required": [
+          "certificateInstallationReq",
+          "xsdMsgDefNamespace"
+        ]
+      },
+      "GetSignedContractDataResponse": {
+        "title": "GetSignedContractDataResponse",
+        "type": "object",
+        "x-examples": {
+          "example-1": {
+            "CCPResponse": {
+              "emaidContent": [
+                {
+                  "messageDef": {
+                    "certificateInstallationRes": "string",
+                    "emaid": "string",
+                    "metaData": "string"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "properties": {
+          "CCPResponse": {
+            "type": "object",
+            "properties": {
+              "emaidContent": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "messageDef": {
+                      "type": "object",
+                      "properties": {
+                        "certificateInstallationRes": {
+                          "type": "string",
+                          "description": "Base64 encoded EXI - Contract installation response as defined in the ISO15118 standard"
+                        },
+                        "emaid": {
+                          "type": "string",
+                          "pattern": "^[A-Za-z]{2}[-]?\\w{3}[-]?\\w{9}[-]?(\\w{1})?$",
+                          "minLength": 14,
+                          "maxLength": 15,
+                          "description": "contract identifier of contract certificate"
+                        },
+                        "metaData": {
+                          "type": "string",
+                          "description": "placeholder for future applications"
+                        },
+                        "cpsV2GRootCertificateFingerprint": {
+                          "type": "string",
+                          "description": "The SHA256 Fingerprint of the desired V2G root CA which shall was used to sign these data with the regarding CPS signing certificate. Its optional. If not given, the CPS will decide which CPS signing V2G PKI will be renurned\n",
+                          "pattern": "^[0-9a-fA-F]{8}\\-([0-9a-fA-F]{4}\\-){3}[0-9a-fA-F]{12}$",
+                          "example": "896b6655-180e-4304-b642-606bb00df8f0",
+                          "x-stoplight": {
+                            "id": "t4cyeu1zs8bm7"
+                          }
+                        }
+                      },
+                      "required": [
+                        "certificateInstallationRes"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ProvideContractDataResponse": {
+        "type": "object",
+        "title": "ProvideSignedContractDataResponse",
+        "description": "Contains a prepared certificateInstallationResponse without the checks defined in [V2G2-894]. These checks need to be performed by the OEM before forwarding the response to the vehicle.",
+        "properties": {
+          "certificateInstallationRes": {
+            "type": "string",
+            "description": "Base64 encoded EXI - Contract installation response as defined in the ISO15118 standard"
+          },
+          "xsdMsgDefNamespace": {
+            "type": "string",
+            "description": "ISO Version",
+            "example": "urn:iso:15118:2:2013:MsgDef"
+          },
+          "cpsV2GRootCertificateFingerprint": {
+            "type": "string",
+            "description": "The SHA256 Fingerprint of the desired V2G root CA which shall was used to sign these data with the regarding CPS signing certificate. Its optional. If not given, the CPS will decide which CPS signing V2G PKI will be renurned\n",
+            "pattern": "^[0-9a-fA-F]{8}\\-([0-9a-fA-F]{4}\\-){3}[0-9a-fA-F]{12}$",
+            "example": "896b6655-180e-4304-b642-606bb00df8f0",
+            "x-stoplight": {
+              "id": "2vroqpvzwjab0"
+            }
+          }
+        },
+        "required": [
+          "certificateInstallationRes",
+          "xsdMsgDefNamespace"
+        ]
+      },
+      "LookupContractResponse": {
+        "type": "object",
+        "title": "LookupContractResponse",
+        "x-examples": {
+          "example-1": {
+            "XMLContracts": [
+              {
+                "pcid": "WMIP12345678901234",
+                "emaid": "EMP99C123456789",
+                "xsdMsgDefNamespace": "urn:iso:15118:2:2013:MsgDef",
+                "contractCertificate": "string",
+                "defaultContract": true,
+                "certValidFrom": "2019-08-24T14:15:22Z",
+                "certValidTo": "2019-08-24T14:15:22Z",
+                "cpsRootCertificateId": "\"CN=V2G Root CA QA G1, DC=V2G, O=Hubject GmbH, C=DE\"",
+                "cpsRootDistinguishedName": "896b6655-180e-4304-b642-606bb00df8f0"
+              }
+            ]
+          }
+        },
+        "properties": {
+          "XMLContracts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "pcid": {
+                  "type": "string",
+                  "description": "PCID of vehicle certificate",
+                  "pattern": "^[a-zA-Z0-9]{17,18}$",
+                  "minLength": 17,
+                  "maxLength": 18
+                },
+                "emaid": {
+                  "type": "string",
+                  "description": "contract identifier of contract certificate",
+                  "pattern": "^[A-Za-z]{2}[-]?\\w{3}[-]?\\w{9}[-]?(\\w{1})?$",
+                  "minLength": 14,
+                  "maxLength": 15
+                },
+                "xsdMsgDefNamespace": {
+                  "type": "string",
+                  "example": "urn:iso:15118:2:2013:MsgDef",
+                  "description": "ISO Version"
+                },
+                "contractCertificate": {
+                  "type": "string",
+                  "description": "Contract Certificate in base64 encoded DER form",
+                  "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$",
+                  "maxLength": 800
+                },
+                "defaultContract": {
+                  "type": "boolean",
+                  "description": "If set to true it will get delivered as certificateInstallationResponse. the value is defined by the OEM/User if multiple contracts are stored in the CCP for one PCID.",
+                  "example": true,
+                  "enum": [
+                    true,
+                    false
+                  ]
+                },
+                "certValidFrom": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2019-08-24T14:15:22Z",
+                  "description": "Valid From Date and Time of contract certificate"
+                },
+                "certValidTo": {
+                  "type": "string",
+                  "format": "date-time",
+                  "example": "2019-08-24T14:15:22Z",
+                  "description": "Valid to Date and Time of contract certificate"
+                },
+                "cpsRootCertificateDN": {
+                  "type": "string",
+                  "example": "896b6655-180e-4304-b642-606bb00df8f0",
+                  "pattern": "^[0-9a-fA-F]{8}\\-([0-9a-fA-F]{4}\\-){3}[0-9a-fA-F]{12}$",
+                  "description": "The DN of the desired V2G root CA",
+                  "x-stoplight": {
+                    "id": "i0q8u31ihz6re"
+                  }
+                },
+                "cpsV2GRootCertificateFingerprint": {
+                  "type": "string",
+                  "description": "The SHA256 Fingerprint of the desired V2G root CA which shall was used to sign these data with the regarding CPS signing certificate. Its optional. If not given, the CPS will decide which CPS signing V2G PKI will be renurned",
+                  "pattern": "^((CN|OU|O|C|DC|ST)=[^,]+,? ?)+$",
+                  "example": "CN=V2G Root CA QA G1, DC=V2G, O=Hubject GmbH, C=DE",
+                  "x-stoplight": {
+                    "id": "vl0bfmhcp30fg"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "Error": {
+        "title": "Error",
+        "type": "object",
+        "properties": {
+          "errorMessages": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "traceId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "SignedContractDataRequest": {
+        "type": "object",
+        "title": "SignedContractData",
+        "minProperties": 4,
+        "properties": {
+          "xsdMsgDefNamespace": {
+            "type": "string",
+            "description": "ISO Version",
+            "example": "urn:iso:15118:2:2013:MsgDef"
+          },
+          "emaid": {
+            "type": "string",
+            "pattern": "^[A-Za-z]{2}[-]?\\w{3}[-]?\\w{9}[-]?(\\w{1})?$",
+            "description": "contract identifier of contract certificate"
+          },
+          "pcid": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9]{17,18}$",
+            "description": "PCID of vehicle certificate"
+          },
+          "signedContractDataXML": {
+            "description": "XML in base64 encoding, as generated by the Certificate Provisioning Service.",
+            "type": "string"
+          },
+          "metadata": {
+            "type": "string",
+            "description": "open for future application"
+          },
+          "cpsV2GRootCertificateFingerprint": {
+            "type": "string",
+            "description": "cpsV2GRootCertificateFingerprint",
+            "pattern": "^[0-9a-fA-F]{8}\\-([0-9a-fA-F]{4}\\-){3}[0-9a-fA-F]{12}$",
+            "example": "896b6655-180e-4304-b642-606bb00df8f0",
+            "x-stoplight": {
+              "id": "qs5345a7g2f87"
+            }
+          }
+        },
+        "required": [
+          "xsdMsgDefNamespace",
+          "emaid",
+          "pcid",
+          "signedContractDataXML"
+        ]
+      }
+    }
+  }
+}
