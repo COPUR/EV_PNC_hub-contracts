@@ -10,3 +10,7 @@ useDefault = true
 # [[allowlists]]
 # description = "why this is safe"
 # paths = ['''docs/examples/sample-token\.md''']
+
+[[allowlists]]
+description = "Vendor example payloads and upstream commit pins, not credentials: Hubject OPCP OpenAPI examples (QA test data) and 40-hex commit SHAs in pins.json"
+paths = ['''^_sources/hubject-opcp-cps\.mo\.openapi\.json$''', '''^_sources/pins\.json$''']
