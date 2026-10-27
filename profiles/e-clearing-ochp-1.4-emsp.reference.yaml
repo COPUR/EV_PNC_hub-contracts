@@ -1,0 +1,49 @@
+# Reference profile: OCHP 1.4 / OCHPdirect 0.2 as the eMSP (EVSP/MDM) sees it. NOT a build target:
+# the project speaks OCPI to ECHX. Kept so the team can read hub behaviour that ECHX inherits from OCHP.
+# Source: https://github.com/e-clearing-net/OCHP master 034363a (2023-12-14), branch OCHP-1.4.1 d72086b; MIT licence,
+# copyright smartlab, elaad.nl (OCHP.md) / smartlab, bluecorner.be, e-laad.nl (LICENSE). Operation names from ochp.wsdl.
+# Retrieved 2026-10-24. Summarised; WSDL/XSD not copied here (pin from the repo if ever needed).
+profile: e-clearing-ochp-1.4-emsp-reference
+base: {protocol: OCHP, version: "1.4", direct_extension: "OCHPdirect 0.2"}
+transport:
+  binding: {value: "SOAP 1.1", source: "OCHP.md Binding to Transport Protocol", confidence: fact}
+  auth: {value: "WS-Security UsernameToken, PasswordText", source: "OCHP.md User Identification", confidence: fact}
+  roles_are_clients_only: {value: true, source: "OCHP-direct.md Basic Principles", confidence: fact}
+  endpoints_recorded_not_called:
+    production: "https://echs.e-clearing.net/service/ochp/v1.4"
+    qa: "https://echs-q.e-clearing.net/service/ochp/v1.4"
+    live_production: "https://echs.e-clearing.net/live/ochp/v1.4"
+    live_qa: "https://echs-q.e-clearing.net/live/ochp/v1.4"
+    direct_production: "https://echs.e-clearing.net/direct/ochp/v1.4"
+    direct_qa: "https://echs-q.e-clearing.net/direct/ochp/v1.4"
+emsp_operations:   # eMSP -> CHS
+  - {op: SetRoamingAuthorisationList, purpose: "upload full own token list"}
+  - {op: UpdateRoamingAuthorisationList, purpose: "delta token updates"}
+  - {op: GetCDRs, purpose: "download CDRs addressed to us; stay queued until ConfirmCDRs"}
+  - {op: ConfirmCDRs, purpose: "approve or decline each CDR"}
+  - {op: GetTariffUpdates, purpose: "tariffs where we are recipient (or default)"}
+  - {op: GetChargePointList, role: NSP, purpose: "static POI", confidence: "fact (op); inference that an eMSP holds NSP role"}
+  - {op: GetChargePointListUpdates, role: NSP}
+  - {op: GetStatus, role: NSP, purpose: "live status with TTL; expired TTL => unknown"}
+cpo_operations_for_reference: [GetRoamingAuthorisationList, GetRoamingAuthorisationListUpdates, GetSingleRoamingAuthorisation, AddCDRs, CheckCDRs, SetChargepointList, UpdateChargePointList, UpdateTariffs, UpdateStatus]
+authorisation:
+  model: {value: whitelist_via_chs, source: "OCHP.md Clearing House functionality", confidence: fact}
+  single_authorisation_reaches_emsp: {value: false, quote: "not a live request at the provider backend", source: "OCHP.md Request for a single authorization", confidence: fact}
+  contract_id_format: {value: "ISO 15118-2 Annex H EMAID, check digit optional but highly recommended", source: "OCHP.md ContractId", confidence: fact}
+  token_types: {value: [rfid, remote, "15118"], representations: [plain, sha-160, sha-256], source: "OCHP.md EmtId", confidence: fact}
+cdrs:
+  states: [new, accepted, rejected, declined, approved, revised]
+  total_cost: {value: "net, without VAT, optional", source: "OCHP.md CDRInfo", confidence: fact}
+  cdr_id: {value: "CPO-ID + up to 31 alphanumerics (OCHP 1.4); 1.3 CDRs only EVSE-unique", source: "OCHP.md CdrId", confidence: fact}
+tariffs:
+  per_recipient: {value: "IndividualTariff.recipient = Provider-IDs; no recipient = default; provider receives only own + default", source: "OCHP.md TariffInfo", confidence: fact}
+clearing:
+  financial_settlement_in_scope: {value: false, source: "OCHP.md Clearing House functionality", confidence: fact}
+ochpdirect:
+  requires_ochp_link_both_sides: {value: true, source: "OCHP-direct.md (commit becd2a9, 2023-03-06)", confidence: fact}
+  security: {value: "TLS 1.2 server certs; HTTP Basic base64('receiver-token:sender-token'); daily token rotation via CHS", confidence: fact}
+  emsp_server_ops: [InformProvider]
+  emsp_client_ops: [AddServiceEndpoints, GetServiceEndpoints, GetEvseStatus, ReportDiscrepancy, SelectEvse, ControlEvse, ReleaseEvse]
+  inform_provider_min_interval_minutes: {value: 15, kind: recommendation, confidence: fact}
+draft_not_for_build:
+  ochp_1_5_json: {value: "OpenAPI 3.0 'OCHP 1.5 JSON API Prototype' info.version 0.0.2, branch OCHP-1.5-Development 6d4508b (2024-05-02), no servers, no security", confidence: fact}

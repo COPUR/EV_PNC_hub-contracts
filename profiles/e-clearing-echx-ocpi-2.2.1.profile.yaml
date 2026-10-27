@@ -1,0 +1,84 @@
+# Overlay profile: e-clearing.net ECHX deviations from OCPI 2.2.1 (eMSP view).
+# Not a schema. Apply on top of the OCPI 2.2.1 base (shared 2.3.0 -> 2.2.1 compatibility layer, WP5).
+# Sources (retrieved 2026-10-24, summarised, not copied):
+#   CL = https://www.e-clearing.net/changelog-summary-system-update (v3.0, 2025-05-25)
+#   SP = https://www.e-clearing.net/starter-package (sitemap lastmod 2024-11-22)
+#   FM = https://www.e-clearing.net/frontendmanual-echx-v2 (v3, Feb 2026) and /frontendmanual-echx (v1, May 2025)
+# Hub endpoint names below are evidence from published pages, not test targets. Do not call them without onboarding.
+profile: e-clearing-echx-ocpi-2.2.1-emsp
+base: {protocol: OCPI, version: 2.2.1, also_offered: ["OCPI 2.1.1", "OCHP 1.3", "OCHP 1.4", "OCHP 1.4.1"]}
+versions:
+  offered: {value: ["2.1.1", "2.2.1"], source: "SP; CL metadata paths", confidence: fact}
+  not_offered: {value: ["2.3.0"], source: "absent from SP and CL", confidence: inference}
+hub:
+  legal_entity: "e-clearing.net GmbH, Aachen (HRB 23939)"
+  system_names: {legacy: eCHS, current: ECHX, source: "CL; data-guardian page", confidence: fact}
+  hosts:
+    qa: {value: "echs-q.e-clearing.net", source: "CL examples; OCHP ochp.wsdl QA ports", confidence: fact}
+    production_ochp: {value: "echs.e-clearing.net", source: "OCHP ochp.wsdl", confidence: fact}
+    production_ocpi: {value: null, x-unverified: true, open_question: Q-EC-03}
+  party_id: {value: null, x-unverified: true, open_question: Q-EC-02}
+transport:
+  encoding: {value: UTF-8, required: true, source: CL, confidence: fact}
+  headers:
+    routing: {value: null, x-unverified: true, open_question: Q-EC-01, note: "OCPI-to/from not mentioned in any public source"}
+  pagination:
+    follow_link_header: {value: true, source: CL, confidence: fact}
+    x_total_count_reliable: {value: false, source: CL, confidence: fact}
+    max_limit: {tokens: 1000000, locations: 50000, cdrs: 50000, tariffs: 50000, hubclientinfo: 50000, sessions: 50000, live_locations: 1000000, source: CL, confidence: fact}
+  extra_query_filters: {value: ["cpo", "emp"], example: "/ocpi/cpo/2.1.1/locations?cpo=DELND", source: CL, confidence: fact}
+  propagation_delay_max_seconds: {value: 120, applies_to: "roaming connection, network, credential, user and partner changes", source: CL, confidence: fact}
+  push_ordering: {value: fifo, applies_to: [locations, tokens, tariffs, sessions, cdrs], source: CL, confidence: fact}
+identifiers:
+  case_sensitive: {value: [token_uid, tariff_id, location_id, evse_uid, session_id, cdr_id], also_for_2_2_1: true, source: CL, confidence: fact}
+  normalisation: {value: "separators removed from optional-separator IDs (e.g. EVSE-ID); case-insensitive values upper-cased", source: CL, confidence: fact}
+  prefix_recommended: {value: "own country code + party ID as prefix (example DELND...)", source: CL, confidence: fact}
+  internal_ids: {value: "ECHX generates internal IDs for cross-mapping and passes them to partner APIs", source: CL, confidence: fact}
+data_quality:
+  missing_required_field_placeholder: {value: "-", source: CL, confidence: fact}
+  default_timezone: {value: UTC, applies_to: "charge points without time zone (also OCHP-origin data on 2.2.1)", source: CL, confidence: fact}
+  evse_without_evse_id: {value: allowed, source: CL, confidence: fact}
+  last_updated: {value: "replaced by ECHX entry date/time", source: CL, confidence: fact}
+  duplicates_in_lists: {value: ignored_by_echx, legacy: rejected, source: CL, confidence: fact}
+modules:
+  supported:
+    value: [credentials, versions, locations, tokens, tariffs, sessions, cdrs, commands, hubclientinfo]
+    source: "CL page-limit list (locations, tokens, tariffs, sessions, cdrs, hubclientinfo); CL command mapping; FM Remote Access option"
+    confidence: inference
+    x-unverified: true
+  not_supported:
+    chargingprofiles: {value: "not implemented yet in 2.2.1", source: CL, confidence: fact}
+  unknown: [payments, bookings]
+patch:
+  lists_and_objects_require_full_value: {value: true, source: CL, confidence: fact}
+commands:
+  ochpdirect_mapping: {value: "OCHPdirect DirectID <-> OCPI 2.2.1 authorization_reference", source: CL, confidence: fact}
+  remote_access_option: {value: "per roaming connection, on by default in Standard connection", source: FM, confidence: fact}
+tokens:
+  whitelist_sharing: {value: "per roaming connection option 'Whitelist' (on by default in Standard connection)", source: FM, confidence: fact}
+  realtime_authorize_forwarded_to_emsp: {value: null, x-unverified: true, open_question: Q-EC-04, note: "OCHP single authorisation checks only the CHS copy (OCHP.md)"}
+cdrs:
+  retention_days: {value: 35, source: CL, confidence: fact}
+  unknown_location: {value: "EVSE ID used instead of dummy values", source: CL, confidence: fact}
+  states_in_frontend: {value: [accepted, rejected, declined, approved, revised], source: FM, confidence: fact}
+  emsp_approve_decline_via_ocpi: {value: null, x-unverified: true, open_question: Q-EC-06}
+  export_window_days: {value: 31, channel: frontend, source: FM, confidence: fact}
+locations:
+  terminated_delivered_days: {value: 14, source: CL, confidence: fact}
+roaming_connections:
+  created_in: {value: ECHX frontend, source: FM, confidence: fact}
+  start_date: {value: "must be in the future", source: FM, confidence: fact}
+  changes_need_partner_approval: {value: true, source: FM, confidence: fact}
+  options: {value: [whitelist, remote_access, location_data, share_private_locations], source: FM, confidence: fact}
+  exclusions: {value: ["No Roaming", "No roaming with Later Joining Partners"], source: FM, confidence: fact}
+  inherit_on_network_join: {value: "new partner in a network inherits the network's roaming connections (or highest)", source: CL, confidence: fact}
+charge_club:
+  precondition: {value: "both parties on productive system; network contact details complete", source: FM, confidence: fact}
+  offer_types: {value: [offer_to_all, exclusive], source: "charge-club page; FM", confidence: fact}
+  activation: {value: "connection created automatically on acceptance; roaming starts next day unless CPO sets another date", source: FM, confidence: fact}
+  termination_notice: {value: "one month after cancellation request", source: FM, confidence: fact}
+  one_time_access_fee: {value: "optional, set by CPO per offer", source: FM, confidence: fact}
+plug_and_charge: {value: null, x-unverified: true, open_question: Q-EC-08}
+quirks:
+  - {text: "X-Total-Count must not be trusted; totals only in the frontend", source: CL, confidence: fact}
+  - {text: "Locations may carry '-' in mandatory string fields; treat as not provided", source: CL, confidence: fact}
